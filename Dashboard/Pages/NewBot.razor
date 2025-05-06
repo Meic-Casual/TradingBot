@@ -1,0 +1,62 @@
+﻿@using Library
+@using System.Globalization
+
+@page "/new-bot"
+@inject IBinanceAPI BinanceAPI
+@inject IJSRuntime JS
+
+<h3>New Bot (Binance Kline Fetch)</h3>
+<div id="btcChart" style="height: 400px;"></div>
+<NewBotForm OnSubmitForm="StartSimulation" />
+
+@code {
+
+    private bool _chartDrawn = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_chartDrawn)
+        {
+            await DrawChart();
+            _chartDrawn = true;
+        }
+    }
+
+    async Task DrawChart()
+    {
+        var candles = await BinanceAPI.GetKlinesAsync("BTCUSDT", "15m", 50);
+
+        var times = candles.Select(c => DateTimeOffset
+            .FromUnixTimeMilliseconds(Convert.ToInt64(c[0]))
+            .ToString("HH:mm")).ToList();
+
+        var closes = candles.Select(c =>
+            decimal.TryParse(c[4].ToString(), CultureInfo.InvariantCulture, out decimal closeValue) ? closeValue : default
+        ).ToList();
+
+        await JS.InvokeVoidAsync("plotlyInterop.renderLineChart", "btcChart", times, closes, "BTC Close");
+    }
+
+    /*private DcaBotConfig config = new()
+        {
+            InitialAllocation = 100,
+            TotalBudget = 1000,
+            DrawdownMultiplier = 1.5m,
+            TargetImpactRatio = 0.05m,
+            BasePaddingPercent = 0.02m,
+            MaxPaddingPercent = 0.06m,
+            CurveStyle = "quadratic",
+            CurveIntensity = 2.0m,
+            PaddingCurveFactor = 1.0m,
+            ExhaustionBoost = 0.5m
+        };*/
+
+    private void StartSimulation()
+    {
+        // You can now use this config with DcaBotLogic.CalculateAllocation
+        Console.WriteLine("Simulation started with:");
+        //Console.WriteLine($"Initial Allocation: {config.InitialAllocation}");
+        // Or trigger your chart/logic here
+    }
+
+}

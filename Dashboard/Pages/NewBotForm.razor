@@ -1,0 +1,85 @@
+﻿<EditForm OnValidSubmit="HandleSubmit" Model="this">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-2">
+        <label>Initial Allocation per Step ($):</label>
+        <InputNumber class="form-control" @bind-Value="initialAllocation" />
+    </div>
+
+    <div class="mb-2">
+        <label>Total Budget ($):</label>
+        <InputNumber class="form-control" @bind-Value="totalBudget" />
+    </div>
+
+    <div class="mb-2">
+        <label>Drawdown Multiplier:</label>
+        <InputNumber class="form-control" @bind-Value="drawdownMultiplier" />
+    </div>
+
+    <div class="mb-2">
+        <label>Target Impact Ratio (0–1):</label>
+        <InputNumber class="form-control" @bind-Value="targetImpactRatio" />
+    </div>
+
+    <div class="mb-2">
+        <label>Base Padding %:</label>
+        <InputNumber class="form-control" @bind-Value="basePaddingPercent" />
+    </div>
+
+    <div class="mb-2">
+        <label>Max Padding %:</label>
+        <InputNumber class="form-control" @bind-Value="maxPaddingPercent" />
+    </div>
+
+    <div class="mb-2">
+        <label>Curve Style:</label>
+        <InputSelect class="form-control" @bind-Value="curveStyle">
+            <option value="linear">Linear</option>
+            <option value="quadratic">Quadratic</option>
+            <option value="exponential">Exponential</option>
+        </InputSelect>
+    </div>
+
+    <div class="mb-2">
+        <label>Curve Intensity:</label>
+        <InputNumber class="form-control" @bind-Value="curveIntensity" />
+    </div>
+
+    <div class="mb-2">
+        <label>Padding Curve Factor:</label>
+        <InputNumber class="form-control" @bind-Value="paddingCurveFactor" />
+    </div>
+
+    <div class="mb-2">
+        <label>Exhaustion Boost:</label>
+        <InputNumber class="form-control" @bind-Value="exhaustionBoost" />
+    </div>
+
+    <button type="submit" class="btn btn-success mt-3">Submit</button>
+</EditForm>
+
+@code {
+
+    [Parameter] public EventCallback OnSubmitForm { get; set; }
+
+    private decimal initialAllocation = 100;
+    private decimal totalBudget = 1000;
+    private decimal drawdownMultiplier = 1.5m;
+    private decimal targetImpactRatio = 0.05m;
+    private decimal basePaddingPercent = 0.02m;
+    private decimal maxPaddingPercent = 0.06m;
+    private string curveStyle = "quadratic";
+    private decimal curveIntensity = 2.0m;
+    private decimal paddingCurveFactor = 1.0m;
+    private decimal exhaustionBoost = 0.5m;
+
+    private async Task HandleSubmit()
+    {
+        Console.WriteLine($"Submitted values:");
+        Console.WriteLine($"Initial: {initialAllocation}, Budget: {totalBudget}, Curve: {curveStyle}");
+        await OnSubmitForm.InvokeAsync();
+
+        // TODO: pass values to parent or run simulation
+    }
+}
