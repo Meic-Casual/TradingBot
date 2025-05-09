@@ -1,4 +1,5 @@
 ﻿using Library;
+using Library.Bot;
 using Library.Trailing;
 using Microsoft.EntityFrameworkCore;
 using Models;
@@ -94,7 +95,10 @@ internal class Program
             Console.WriteLine($"Simulation depth set to {simDepth}");
             Console.WriteLine("set interval (1m,3m,5m,15m,30m,1h,2h,4h,6h,8h,12h,1d,3d,1w,1M):");
             var interval = Console.ReadLine() ?? "15m";
-            var botSim = new BotSimulation(10, new HistoricalChartBasedPriceProvider(simDepth, interval), simDepth, new ValueRiseTrailing(95000m, 0.005f));
+
+            var setting = new BotSettings(10m, 0.5m, new ValueTrailingSettings(ValueTrailingSettings.ChangeType.RISING, 95000m, 0.005f));
+            var botSim = new BotSimulation(setting, new HistoricalChartBasedPriceProvider(simDepth, interval), simDepth);
+
             await botSim.Run();
         }
 

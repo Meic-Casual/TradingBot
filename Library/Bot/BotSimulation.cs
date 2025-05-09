@@ -1,34 +1,38 @@
 ﻿using Library.Trailing;
 using Models.Scaffolded;
 
-namespace Library
+namespace Library.Bot
 {
     public class BotSimulation
     {
 
         private const decimal NoPurchasesYet = decimal.MaxValue;
 
-        decimal initialPurchaseQuota;
-        int candlesDepth;
+        decimal BaseStepFunds => botSettings.BaseStepFunds;
+        decimal MinProfitRatePercent => botSettings.MinProfitRatePercent;
+        IValueTrailing? PriceTrailing => currentBotState.PriceTrailing;
+
+        readonly int candlesDepth;
         readonly ICurrentPriceProvider priceProvider;
+        
+        readonly BotSettings botSettings;
+        readonly BotState currentBotState;
 
-        IValueTrailing? priceTrailing;
-
-        //tmp
-        decimal buyOverallCost = 0m, sellOverallCost = 0m;
-
-        public BotSimulation(decimal initialPurchaseQuota, ICurrentPriceProvider priceProvider, int candlesDepth, IValueTrailing? valueTrailing = null)
+        public BotSimulation(BotSettings botSettings, ICurrentPriceProvider priceProvider, int candlesDepth)
         {
+            ArgumentNullException.ThrowIfNull(botSettings);
             ArgumentNullException.ThrowIfNull(priceProvider);
-            this.initialPurchaseQuota = initialPurchaseQuota;
+
             this.candlesDepth = candlesDepth;
             this.priceProvider = priceProvider;
-            priceTrailing = valueTrailing;
+            this.botSettings = botSettings;
+
+            currentBotState = BotState.CreateInitialStateFrom(botSettings);
         }
 
         public async Task Run()
         {
-            List<decimal> purchases = [];
+            var purchases = currentBotState.Purchases;
             for (int i = 0; i < candlesDepth; i++)
             {
                 decimal currentPrice;
@@ -43,19 +47,26 @@ namespace Library
                     return;
                 }
 
-                var avgPrice = purchases.Count > 0 ? purchases.Average() : NoPurchasesYet;
+                var avgPrice = purchases.Count > 0 ? purchases.Average(s => s.Price) : NoPurchasesYet;
                 
                 if (avgPrice > currentPrice)
                 {
-                    purchases.Add(currentPrice);
+                    currentBotState.RegisterPurchase(new Purchase(currentPrice, BaseStepFunds));
                     Console.WriteLine($"Price ({currentPrice}) lower than AVG ({avgPrice}) - purchase.");
                 }
                 else
                 {
                     if(TrySelling(currentPrice, avgPrice))
                     {
-                        purchases.Clear();
-                        priceTrailing?.Reset();
+                        //test
+                        var overallCost = purchases.Sum(s => s.Cost);
+                        var overallAssetsQuantity = purchases.Sum(s => s.Quantity);
+                        var grossProfit = overallAssetsQuantity * currentPrice - overallCost;
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"Gross profit is {grossProfit:F2} (from {overallCost:F2}).");
+                        Console.ResetColor();
+                        //
+                        currentBotState.Reset();
                     }
                 }
             }
@@ -65,7 +76,7 @@ namespace Library
         {
             UpdateTrailingPrice(currentPrice, out var priceSuitableForSell);
             var profitRate = (currentPrice - avgPrice) / avgPrice * 100m;
-            if (profitRate > 0)
+            if (profitRate >= MinProfitRatePercent)
             {
                 if (priceSuitableForSell)
                 {
@@ -88,9 +99,9 @@ namespace Library
 
         void UpdateTrailingPrice(decimal price, out bool priceSuitableForSell)
         {
-            if (priceTrailing != null)
+            if (PriceTrailing != null)
             {
-                priceTrailing.UpdateCurrentValue(price, out priceSuitableForSell);
+                PriceTrailing.UpdateCurrentValue(price, out priceSuitableForSell);
             }
             else
             {
