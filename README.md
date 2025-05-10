@@ -9,6 +9,10 @@ Current status: Work in progress (early stage)
 
 | Feature                                    | Implemented |
 | ------------------------------------------ | ----------- |
+| Base processing flow                       |🛠️|
+| Modular component structure                |🛠️|
+| Config/state separation                    |✅|
+| Trailing sell logic                        |🛠️|
 | Base allocation per step                   |-|
 | Scaled allocation within price range       |-|
 | Price-to-average padding logic             |-|
