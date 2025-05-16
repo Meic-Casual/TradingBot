@@ -12,11 +12,11 @@ public abstract class ValueTrailing : IValueTrailing
 
     protected abstract decimal DefaultInitialValue { get; }
 
-    public bool TriggerReached => triggerThresholdReached;
-    public decimal CurrentValue => currentValue;
-    public decimal CurrentReboundPoint => reboundReferencePoint;
-
-    /// <param name="maxReboundRate">Normalized value.</param>
+    public bool IsTrailingConcluded => CalculateReboundRate(currentValue) >= maxReboundRate;
+    public bool IsTriggerReached => triggerThresholdReached;
+    public decimal LastRecordedValue => currentValue;
+    public decimal CurrentReboundValue => reboundReferencePoint;
+    
     public ValueTrailing(decimal triggerValue, float maxReboundRate)
     {
         this.triggerValue = triggerValue;
@@ -51,6 +51,8 @@ public abstract class ValueTrailing : IValueTrailing
             trailingConcluded = CalculateReboundRate(value) >= maxReboundRate;
         }
     }
+
+    public void UpdateCurrentValue(decimal value) => UpdateCurrentValue(value, out bool _);
 
     protected abstract bool IsTriggerThresholdReached(decimal currentValue, decimal newValue);
     protected abstract decimal SelectBestReboundReferencePoint(decimal value1, decimal value2);

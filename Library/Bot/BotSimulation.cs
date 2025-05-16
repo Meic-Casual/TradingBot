@@ -1,22 +1,22 @@
-﻿using Library.Trailing;
-using Models.Scaffolded;
+﻿using Models.Scaffolded;
 
 namespace Library.Bot
 {
+
     public class BotSimulation
     {
 
         private const decimal NoPurchasesYet = decimal.MaxValue;
 
         decimal BaseStepFunds => botSettings.BaseStepFunds;
-        decimal MinProfitRatePercent => botSettings.MinProfitRatePercent;
-        IValueTrailing? PriceTrailing => currentBotState.PriceTrailing;
 
         readonly int candlesDepth;
         readonly ICurrentPriceProvider priceProvider;
         
         readonly BotSettings botSettings;
-        readonly BotState currentBotState;
+        readonly BotState botState;
+        readonly List<IActionSkipCondition> purchaseSkipConditions;
+        readonly List<IActionSkipCondition> sellSkipConditions;
 
         public BotSimulation(BotSettings botSettings, ICurrentPriceProvider priceProvider, int candlesDepth)
         {
@@ -27,12 +27,13 @@ namespace Library.Bot
             this.priceProvider = priceProvider;
             this.botSettings = botSettings;
 
-            currentBotState = BotState.CreateInitialStateFrom(botSettings);
+            botState = BotState.CreateInitialStateFrom(botSettings);
+            sellSkipConditions = SellConditionFactory.FromSettings(botSettings).ToList();
+            purchaseSkipConditions = PurchaseConditionFactory.FromSettings(botSettings).ToList();
         }
 
         public async Task Run()
         {
-            var purchases = currentBotState.Purchases;
             for (int i = 0; i < candlesDepth; i++)
             {
                 decimal currentPrice;
@@ -47,68 +48,38 @@ namespace Library.Bot
                     return;
                 }
 
-                var avgPrice = purchases.Count > 0 ? purchases.Average(s => s.Price) : NoPurchasesYet;
+                botState.RegisterPriceValue(currentPrice);
+                var avgPrice = botState.PurchasesCount > 0 ? botState.AveragePurchasePrice : NoPurchasesYet;
                 
                 if (avgPrice > currentPrice)
                 {
-                    currentBotState.RegisterPurchase(new Purchase(currentPrice, BaseStepFunds));
-                    Console.WriteLine($"Price ({currentPrice}) lower than AVG ({avgPrice}) - purchase.");
+                    if (IsSuitableForPurchase(botState))
+                    {
+                        botState.RegisterPurchase(new Purchase(currentPrice, BaseStepFunds));
+                        Console.WriteLine($"Price ({currentPrice}) lower than AVG ({avgPrice}) - purchase.");
+                    }
                 }
                 else
                 {
-                    if(TrySelling(currentPrice, avgPrice))
+                    if (IsSuitableForSell(botState))
                     {
                         //test
-                        var overallCost = purchases.Sum(s => s.Cost);
-                        var overallAssetsQuantity = purchases.Sum(s => s.Quantity);
+                        var overallCost = botState.Purchases.Sum(s => s.Cost);
+                        var overallAssetsQuantity = botState.Purchases.Sum(s => s.Quantity);
                         var grossProfit = overallAssetsQuantity * currentPrice - overallCost;
                         Console.ForegroundColor = ConsoleColor.Yellow;
                         Console.WriteLine($"Gross profit is {grossProfit:F2} (from {overallCost:F2}).");
                         Console.ResetColor();
                         //
-                        currentBotState.Reset();
+                        botState.Reset();
                     }
                 }
             }
         }
 
-        private bool TrySelling(decimal currentPrice, decimal avgPrice)
-        {
-            UpdateTrailingPrice(currentPrice, out var priceSuitableForSell);
-            var profitRate = (currentPrice - avgPrice) / avgPrice * 100m;
-            if (profitRate >= MinProfitRatePercent)
-            {
-                if (priceSuitableForSell)
-                {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"Profit: {profitRate:F2} (from {currentPrice} - {avgPrice}) - selling.");
-                    Console.ResetColor();
-                    return true;
-                }
-                else
-                {
-                    Console.WriteLine($"Profit: {profitRate:F2} but trailing prevents sell.");
-                }
-            }
-            else
-            {
-                Console.WriteLine($"Price ({currentPrice}) higher than AVG ({avgPrice}) - skip ({profitRate:F2}).");
-            }
-            return false;
-        }
-
-        void UpdateTrailingPrice(decimal price, out bool priceSuitableForSell)
-        {
-            if (PriceTrailing != null)
-            {
-                PriceTrailing.UpdateCurrentValue(price, out priceSuitableForSell);
-            }
-            else
-            {
-                //trailing is not used, so no additional requirements for sell exist
-                priceSuitableForSell = true;
-            }
-        }
+        private bool IsSuitableForSell(IBotContext context) => sellSkipConditions.All(s => !s.SkipConditionMet(context));
+        private bool IsSuitableForPurchase(IBotContext context) => purchaseSkipConditions.All(s => !s.SkipConditionMet(context));
 
     }
+
 }
