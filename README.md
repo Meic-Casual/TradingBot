@@ -14,13 +14,13 @@ Current status: Work in progress (early stage)
 | Modular component structure                |🛠️|
 | Config/state separation                    |✅|
 | Trailing sell logic                        |🛠️|
-| Base allocation per step                   |-|
-| Scaled allocation within price range       |-|
+| Base allocation per step                   |🛠️|
+| Scaled allocation within price range       |🛠️|
 | Price-to-average padding logic             |-|
 | Non-linear scaling curve                   |-|
 | Dynamic base allocation growth             |-|
 | Adaptive emphasis based on remaining funds |-|
 | Step-based weight handling                 |-|
 | Profit-based trailing stop logic           |✅|
-| Minimum profit sell filter                 |-|
+| Minimum profit sell filter                 |✅|
 | Fund-aware aggression logic                |-|
