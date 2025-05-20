@@ -32,8 +32,11 @@ namespace Library.Bot
             purchaseSkipConditions = PurchaseConditionFactory.FromSettings(botSettings).ToList();
         }
 
+        Indicators.Tools.RSIBasedDipDetector detector = new Indicators.Tools.RSIBasedDipDetector(new Indicators.RSI(), 15, 8);
+
         public async Task Run()
         {
+            Console.ForegroundColor = ConsoleColor.White;
             for (int i = 0; i < candlesDepth; i++)
             {
                 decimal currentPrice;
@@ -50,7 +53,12 @@ namespace Library.Bot
 
                 botState.RegisterPriceValue(currentPrice);
                 var avgPrice = botState.PurchasesCount > 0 ? botState.AveragePurchasePrice : NoPurchasesYet;
-                
+
+                Console.WriteLine(" >>> " + (detector.DipDetected(botState.RecordedPrices) ? "dip detected at " + currentPrice : "no dip detected"));
+
+                //test
+                new OversoldScaler().CalculateScale(botState);
+
                 if (avgPrice > currentPrice)
                 {
                     if (IsSuitableForPurchase(botState))

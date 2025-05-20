@@ -10,6 +10,7 @@ public class AllocationCalculator : IAllocationCalculator
 
     public AllocationCalculator(IBaseAllocationProvider baseProvider, params IAllocationScaler[] scalers)
     {
+        ArgumentNullException.ThrowIfNull(baseProvider);
         this.baseProvider = baseProvider;
         this.scalers = scalers.ToList();
     }

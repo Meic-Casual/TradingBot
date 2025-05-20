@@ -22,6 +22,9 @@ namespace Library.Bot
 
         public decimal LastRecordedPrice { get; private set; } = 0m;
         public decimal LowestRecordedPrice { get; private set; } = decimal.MaxValue;
+        public IReadOnlyList<decimal> RecordedPrices => recordedPrices;
+
+        readonly List<decimal> recordedPrices = [];
 
         public IReadOnlyList<Purchase> Purchases => purchases;
         public int PurchasesCount => purchases.Count;
@@ -38,6 +41,7 @@ namespace Library.Bot
         {
             LowestRecordedPrice = decimal.Min(price, LowestRecordedPrice);
             LastRecordedPrice = price;
+            recordedPrices.Add(price);
             PriceTrailing?.UpdateCurrentValue(price);
         }
 
