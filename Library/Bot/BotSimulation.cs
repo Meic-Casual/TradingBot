@@ -17,6 +17,7 @@ namespace Library.Bot
         readonly BotState botState;
         readonly List<IActionSkipCondition> purchaseSkipConditions;
         readonly List<IActionSkipCondition> sellSkipConditions;
+        readonly AllocationCalculator? allocationCalculator;
 
         public BotSimulation(BotSettings botSettings, ICurrentPriceProvider priceProvider, int candlesDepth)
         {
@@ -54,17 +55,31 @@ namespace Library.Bot
                 botState.RegisterPriceValue(currentPrice);
                 var avgPrice = botState.PurchasesCount > 0 ? botState.AveragePurchasePrice : NoPurchasesYet;
 
-                Console.WriteLine(" >>> " + (detector.DipDetected(botState.RecordedPrices) ? "dip detected at " + currentPrice : "no dip detected"));
+                Console.WriteLine(" >>> " + (detector.IsDipDetected(botState.RecordedPrices) ? "dip detected at " + currentPrice : "no dip detected"));
 
                 //test
-                new OversoldScaler().CalculateScale(botState);
+                if(new DipScaler(new Indicators.Tools.RSIBasedDipDetector(new(), 10, 5)).CalculateScale(botState) > 0)
+                {
+                    Console.ForegroundColor = ConsoleColor.DarkBlue;
+                    Console.WriteLine($"DIP (X) DETECTED for {currentPrice}!");
+                    Console.ResetColor();
+                }
+                if (new DipScaler(new Indicators.Tools.RSIBasedDipDetector(new(), 10, 5) { SingularStabilizationSegmentOnlyAllowed = false }).CalculateScale(botState) > 0)
+                {
+                    Console.ForegroundColor = ConsoleColor.DarkGreen;
+                    Console.WriteLine($"DIP DETECTED for {currentPrice}!");
+                    Console.ResetColor();
+                }
+                //new OversoldScaler().CalculateScale(botState);
 
                 if (avgPrice > currentPrice)
                 {
                     if (IsSuitableForPurchase(botState))
                     {
                         botState.RegisterPurchase(new Purchase(currentPrice, BaseStepFunds));
-                        Console.WriteLine($"Price ({currentPrice}) lower than AVG ({avgPrice}) - purchase.");
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"Price ({currentPrice}) lower than AVG ({avgPrice}) - purchase - {botState.Purchases.Count} purchases in register.");
+                        Console.ResetColor();
                     }
                 }
                 else
@@ -76,7 +91,7 @@ namespace Library.Bot
                         var overallAssetsQuantity = botState.Purchases.Sum(s => s.Quantity);
                         var grossProfit = overallAssetsQuantity * currentPrice - overallCost;
                         Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine($"Gross profit is {grossProfit:F2} (from {overallCost:F2}).");
+                        Console.WriteLine($"$$$ Gross profit is {grossProfit:F2} (from {overallCost:F2}).");
                         Console.ResetColor();
                         //
                         botState.Reset();

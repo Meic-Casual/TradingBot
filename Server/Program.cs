@@ -20,6 +20,12 @@ internal class Program
 
         public async Task RunAsync()
         {
+            var setting = new BotSettings(10m, 0.5m, new ValueTrailingSettings(ValueTrailingSettings.ChangeType.RISING, 95000m, 0.005f)) { MinDeviationFromAveragePercent = 0.0035m };
+            var botSim = new BotSimulation(setting, new HistoricalChartBasedPriceProvider(25, "1w"), 25);
+            await botSim.Run();
+            
+            return;
+
             while (true)
             {
                 Console.WriteLine("Pick action");

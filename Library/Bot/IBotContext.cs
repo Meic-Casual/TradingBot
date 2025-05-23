@@ -19,6 +19,8 @@ namespace Library.Bot
 
         int PurchasesCount { get; }
 
+        AllocationCalculatorState AllocationCalculatorState { get; }
+
     }
 
 }

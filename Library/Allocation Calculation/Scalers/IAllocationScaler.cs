@@ -5,7 +5,7 @@ namespace Library;
 public interface IAllocationScaler
 {
 
-    decimal Scale(decimal baseAllocation, IBotContext context);
+    decimal Scale(decimal, IBotContext context);
     decimal CalculateScale(IBotContext context);
 
 }

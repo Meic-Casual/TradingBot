@@ -7,15 +7,15 @@ namespace Library.Bot
     public class BotSettings(
         decimal baseStepFunds,
         decimal minProfitRatePercent = 0m,
-        ValueTrailingSettings? trailingSetting = null) : IHost<ValueTrailingSettings>
+        ValueTrailingSettings? trailingSetting = null,
+        AllocationCalculatorSettings? allocationCalculatorSettings = null) : IBotSettings
     {
 
         public decimal BaseStepFunds { get; } = baseStepFunds;
         public decimal MinProfitRatePercent { get; } = minProfitRatePercent;
         public ValueTrailingSettings? TrailingSetting { get; } = trailingSetting;
+        public AllocationCalculatorSettings? AllocationCalculatorSettings { get; } = allocationCalculatorSettings;
         public decimal MinDeviationFromAveragePercent { get; init; } = 0m;
-
-        ValueTrailingSettings? IHost<ValueTrailingSettings>.Value => TrailingSetting;
 
     }
 

@@ -1,20 +1,24 @@
 ﻿namespace Library.Indicators.Tools
 {
 
-    internal class RSIBasedDipDetector
+    public class RSIBasedDipDetector
     {
 
-        readonly ushort fallRateDeltaThreshold, stabilizationDeltaThreshold;
+        readonly byte fallRateDeltaThreshold, stabilizationDeltaThreshold;
 
-        public ushort FallDetectionFrameWidth { get; init; } = 3;
-        public ushort StabilizationDetectionFrameWidth { get; init; } = 3;
+        public byte FallDetectionFrameWidth { get; init; } = 3;
+        public byte StabilizationDetectionFrameWidth { get; init; } = 3;
 
-        public ushort FallDetectionFrameShift { get; init; } = 3;
-        public ushort StabilizationDetectionFrameShift { get; init; } = 0;
+        public byte FallDetectionFrameShift { get; init; } = 3;
+        public byte StabilizationDetectionFrameShift { get; init; } = 0;
+
+        public bool SingularStabilizationSegmentOnlyAllowed { get; init; } = true;
+
+        int SignedStabilizationDeltaThreshold => -stabilizationDeltaThreshold;
 
         readonly RSI rsi;
 
-        public RSIBasedDipDetector(RSI rsi, ushort fallRateDeltaThreshold, ushort stabilizationDeltaThreshold)
+        public RSIBasedDipDetector(RSI rsi, byte fallRateDeltaThreshold, byte stabilizationDeltaThreshold)
         {
             ArgumentNullException.ThrowIfNull(rsi);
             this.rsi = rsi;
@@ -22,31 +26,49 @@
             this.stabilizationDeltaThreshold = stabilizationDeltaThreshold;
         }
 
-        public bool DipDetected(IReadOnlyList<decimal> prices)
+        public bool IsDipDetected(IReadOnlyList<decimal> prices)
         {
-            if (FallRate(rsi, prices, FallDetectionFrameShift, FallDetectionFrameWidth) >= fallRateDeltaThreshold)
+            
+            if (FallRate(rsi, prices, FallDetectionFrameShift, FallDetectionFrameWidth) < SignedStabilizationDeltaThreshold)
             {
-                return RiseRate(rsi, prices, StabilizationDetectionFrameShift, StabilizationDetectionFrameWidth) <= stabilizationDeltaThreshold;
+                return ContainsValidStabilizationSegment(rsi, prices, StabilizationDetectionFrameShift, StabilizationDetectionFrameWidth);
             }
             return false;
         }
 
-        private int RiseRate(RSI rsi, IReadOnlyList<decimal> prices, ushort frameShift, ushort frameWidth)
+        private bool ContainsValidStabilizationSegment(RSI rsi, IReadOnlyList<decimal> prices, byte frameShift, byte frameWidth)
         {
-            return (int)GetValueDeltas(rsi, prices, frameShift, frameWidth).Max();
+            var deltas = GetValueDeltas(rsi, prices, frameShift, frameWidth);
+            return IsStabilizationSegment(deltas.Max()) && StabilizationConstrainsMet(deltas);
         }
 
-        private int FallRate(RSI rsi, IReadOnlyList<decimal> prices, ushort frameShift, ushort frameWidth)
+        private bool IsStabilizationSegment(float delta) => Math.Abs(delta) <= stabilizationDeltaThreshold;
+
+        private bool StabilizationConstrainsMet(List<float> deltas)// => !SingularStabilizationSegmentOnlyAllowed || deltas.Count(IsStabilizationSegment) == 1;
         {
-            return (int)Math.Abs(GetValueDeltas(rsi, prices, frameShift, frameWidth).Min());
+            var x = !SingularStabilizationSegmentOnlyAllowed;
+            var y = deltas.Count(IsStabilizationSegment) == 1;
+
+            Console.ForegroundColor = ConsoleColor.DarkCyan;
+            Console.WriteLine($"{x} / {y}({deltas.Count(IsStabilizationSegment)} - {string.Join(", ", deltas)})");
+            Console.ResetColor();
+
+            return x || y;
         }
 
-        private List<float> GetValueDeltas(RSI rsi, IReadOnlyList<decimal> prices, ushort frameShift, ushort frameWidth)
+        private int FallRate(RSI rsi, IReadOnlyList<decimal> prices, byte frameShift, byte frameWidth)
+        {
+            var deltas = GetValueDeltas(rsi, prices, frameShift, frameWidth);
+            Console.WriteLine($"::::: FallRate({prices.Count}/{deltas.Count}) = {(int)deltas.Min()} from {string.Join(", ", deltas)}");
+            return (int)GetValueDeltas(rsi, prices, frameShift, frameWidth).Min();
+        }
+
+        private List<float> GetValueDeltas(RSI rsi, IReadOnlyList<decimal> prices, byte frameShift, byte frameWidth)
         {
             var values = new List<float>(frameWidth);
             for (ushort i = 0; i < frameWidth; i++)
             {
-                values.Add(rsi.CalculateValue(prices, i));
+                values.Add(rsi.CalculateValue(prices, (ushort)(frameShift + i)));
             }
             values.Reverse();
             return values.Zip(values.Skip(1), (a, b) => b - a).ToList();

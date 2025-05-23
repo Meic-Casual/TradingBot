@@ -18,11 +18,9 @@ public class AllocationCalculator : IAllocationCalculator
     public decimal GetAllocation(IBotContext context)
     {
         var amount = baseProvider.GetBaseAmount(context);
-        foreach (var scaler in scalers)
-        {
-            amount = scaler.Scale(amount, context);
-        }
-        return amount;
+        var calculatorState = context.AllocationCalculatorState;
+        var normalizedScalesByScaler = scalers.Where(calculatorState.IsEnabled).Select(s => new AllocationScaleEntry(s, s.CalculateScale(context)));
+        return amount * calculatorState.CalculateWeightedScale(normalizedScalesByScaler, true);
     }
 
 }

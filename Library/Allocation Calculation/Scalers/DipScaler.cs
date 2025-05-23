@@ -1,17 +1,24 @@
 ﻿using Library.Bot;
-using Library.Indicators;
+using Library.Indicators.Tools;
 
 namespace Library;
 
 public class DipScaler : AllocationScalerBase
 {
 
-    readonly RSI rsi = new();
+    public const decimal DipDetectedNormalizedScale = 1m;
+    public const decimal DipNotDetectedNormalizedScale = 0m;
+
+    readonly RSIBasedDipDetector dipDetector;
+
+    public DipScaler(RSIBasedDipDetector dipDetector) : base()
+    {
+        this.dipDetector = dipDetector;
+    }
 
     protected override decimal CalculateScaleSafe(IBotContext context)
     {
-        return ((decimal)MathUtils.InverseLerp(0f, 100f, rsi.CalculateValue(context.RecordedPrices)));
-        return default;
+        return dipDetector.IsDipDetected(context.RecordedPrices) ? DipDetectedNormalizedScale : DipNotDetectedNormalizedScale;
     }
 
 }

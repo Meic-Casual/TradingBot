@@ -7,24 +7,21 @@ namespace Library.Bot
     internal class BotState : IBotContext
     {
 
-        internal static BotState CreateInitialStateFrom(IHost<ValueTrailingSettings> settingsProvider)
+        internal static BotState CreateInitialStateFrom(IBotSettings settings)
         {
-            ArgumentNullException.ThrowIfNull(settingsProvider);
-            if (settingsProvider.Value != null)
+            ArgumentNullException.ThrowIfNull(settings);
+            return new BotState()
             {
-                return new BotState()
-                {
-                    PriceTrailing = settingsProvider.Value.CreateInstanceFromSettings()
-                };
-            }
-            return new();
+                PriceTrailing = settings.TrailingSetting?.CreateInstanceFromSettings(),
+                AllocationCalculatorState = settings.AllocationCalculatorSettings?.CreateInstanceFromSettings() ?? new()
+            };
         }
 
         public decimal LastRecordedPrice { get; private set; } = 0m;
         public decimal LowestRecordedPrice { get; private set; } = decimal.MaxValue;
         public IReadOnlyList<decimal> RecordedPrices => recordedPrices;
 
-        readonly List<decimal> recordedPrices = [];
+        readonly List<decimal> recordedPrices = new();
 
         public IReadOnlyList<Purchase> Purchases => purchases;
         public int PurchasesCount => purchases.Count;
@@ -36,6 +33,8 @@ namespace Library.Bot
         public decimal RemainingAllowance => throw new NotImplementedException();
 
         readonly List<Purchase> purchases = [];
+
+        public AllocationCalculatorState AllocationCalculatorState { get; private init; }
 
         public void RegisterPriceValue(decimal price)
         {
